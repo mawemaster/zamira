@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -30,16 +29,20 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import XPBar from "./components/XPBar";
-import UserAvatar from "./components/UserAvatar";
-import NotificationToast from "./components/NotificationToast";
-import GlobalAudioPlayer from "./components/audio/GlobalAudioPlayer";
-import PWAInstallPrompt from "./components/PWAInstallPrompt";
-import PWANotifications from "./components/PWANotifications";
-import PWAHeadTags from "./components/PWAHeadTags";
-import QuestTracker from "./components/QuestTracker";
-import AdminGlobalMessage from "./components/AdminGlobalMessage";
-import RavenNotificationIcon from "./components/ravens/RavenNotificationIcon";
+
+// --- ÁREA CORRIGIDA (Todos com ../) ---
+import XPBar from "../components/XPBar";
+import UserAvatar from "../components/UserAvatar";
+import NotificationToast from "../components/NotificationToast";
+import GlobalAudioPlayer from "../components/audio/GlobalAudioPlayer";
+import PWAInstallPrompt from "../components/PWAInstallPrompt";
+import PWANotifications from "../components/PWANotifications";
+import PWAHeadTags from "../components/PWAHeadTags";
+import QuestTracker from "../components/QuestTracker";
+import AdminGlobalMessage from "../components/AdminGlobalMessage";
+import RavenNotificationIcon from "../components/ravens/RavenNotificationIcon";
+// --------------------------------------
+
 import { setDefaultOptions } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -171,7 +174,7 @@ export default function Layout({ children, currentPageName }) {
   const [audioPlaylist, setAudioPlaylist] = useState([]);
   const [currentAudioIndex, setCurrentAudioIndex] = useState(0);
   const [themeConfig, setThemeConfig] = useState(THEME_CONFIGS.dark);
-  
+   
   const shownNotificationsRef = useRef(new Set());
   const notificationGroupsRef = useRef(new Map());
 
