@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { supabase } from "@/api/supabaseClient"; // CONEXÃO REAL
+// CORREÇÃO AQUI: Caminho relativo direto e "from" correto
+import { supabase } from "../api/supabaseClient"; 
 import { 
   Home, Compass, MessageCircle, Bell, Store, User as UserIcon, Settings,
   Sparkles, Eye, Coins, Backpack, Crown, Shield, Headphones, Megaphone, LogIn, Mail, Lock
@@ -9,10 +10,9 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input"; // Importando Input
+import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 
-// Imports dos seus componentes (mantidos)
 import XPBar from "../components/XPBar";
 import UserAvatar from "../components/UserAvatar";
 import NotificationToast from "../components/NotificationToast";
@@ -34,7 +34,6 @@ if (typeof window !== 'undefined') {
 const ADMIN_EMAILS = ["mawemaster@gmail.com", "chotteemelyn@gmail.com"];
 const NO_LAYOUT_PAGES = ["Home", "Sobre", "PortalTarotPremium"];
 
-// Mantendo configurações de tema e cores
 const archetypeColors = {
   bruxa_natural: "#9333EA", sabio: "#F59E0B", guardiao_astral: "#3B82F6",
   xama: "#10B981", navegador_cosmico: "#8B5CF6", alquimista: "#6366F1", none: "#64748B"
@@ -42,7 +41,6 @@ const archetypeColors = {
 
 const THEME_CONFIGS = {
   dark: { background: "#02031C", backgroundGradient: "linear-gradient(to bottom, #02031C, #1a1a2e, #02031C)", surface: "#1e1b4b", card: "#1e293b", accent: "#a855f7", accentHover: "#9333ea", border: "rgba(168, 85, 247, 0.3)", textSecondary: "#cbd5e1" },
-  // ... (Você pode manter os outros temas se quiser, simplifiquei aqui para não ficar gigante, mas o código original tinha todos)
 };
 
 const generateFireflies = (count) => Array.from({ length: count }, (_, i) => ({
@@ -59,13 +57,11 @@ export default function Layout({ children, currentPageName }) {
   const [themeConfig, setThemeConfig] = useState(THEME_CONFIGS.dark);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Estados para o Login/Cadastro
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [authMode, setAuthMode] = useState("login"); // 'login' ou 'signup'
+  const [authMode, setAuthMode] = useState("login");
   const [authLoading, setAuthLoading] = useState(false);
 
-  // Estados dos componentes extras
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadRavensCount, setUnreadRavensCount] = useState(0);
@@ -81,31 +77,25 @@ export default function Layout({ children, currentPageName }) {
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [location.pathname]);
 
-  // --- CARREGAR USUÁRIO REAL (SUPABASE) ---
   useEffect(() => {
     const init = async () => {
       setIsLoading(true);
-      
-      // 1. Verifica sessão ativa
       const { data: { session } } = await supabase.auth.getSession();
-      
       if (session?.user) {
         await fetchProfile(session.user);
       } else {
         setUser(null);
       }
-      
       setIsLoading(false);
     };
     init();
 
-    // Escuta mudanças na autenticação (login/logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         fetchProfile(session.user);
       } else {
         setUser(null);
-        navigate(createPageUrl("Hub")); // Redireciona para a raiz se deslogar
+        navigate(createPageUrl("Hub"));
       }
     });
 
@@ -114,7 +104,6 @@ export default function Layout({ children, currentPageName }) {
 
   const fetchProfile = async (authUser) => {
     try {
-      // Busca dados extras na tabela 'profiles'
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
@@ -123,10 +112,8 @@ export default function Layout({ children, currentPageName }) {
 
       if (profile) {
         setUser({ ...authUser, ...profile });
-        // Aplica tema se existir
         if (THEME_CONFIGS[profile.theme]) setThemeConfig(THEME_CONFIGS[profile.theme]);
       } else {
-        // Se não tiver perfil criado ainda, usa o básico
         setUser(authUser);
       }
     } catch (error) {
@@ -134,23 +121,18 @@ export default function Layout({ children, currentPageName }) {
     }
   };
 
-  // --- FUNÇÕES DE AUTENTICAÇÃO ---
   const handleAuth = async (e) => {
     e.preventDefault();
     setAuthLoading(true);
-    
     try {
       if (authMode === "login") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       } else {
-        // Cadastro
         const { data, error } = await supabase.auth.signUp({ 
           email, 
           password,
-          options: {
-            data: { full_name: email.split('@')[0] } // Usa parte do email como nome inicial
-          }
+          options: { data: { full_name: email.split('@')[0] } }
         });
         if (error) throw error;
         alert("Cadastro realizado! Se você não entrar automaticamente, verifique seu email.");
@@ -162,7 +144,6 @@ export default function Layout({ children, currentPageName }) {
     }
   };
 
-  // Funções auxiliares (Áudio, Logout, etc) mantidas simplificadas
   const handleLogout = async () => { await supabase.auth.signOut(); };
   const handleNotificationClick = (e) => { e.preventDefault(); navigate(createPageUrl("Notificacoes")); };
   const handleCloseAudioPlayer = () => { setCurrentAudio(null); setAudioPlaylist([]); };
@@ -176,7 +157,6 @@ export default function Layout({ children, currentPageName }) {
     { icon: UserIcon, label: "Conta", path: "MinhaConta" }
   ];
 
-  // --- TELA DE LOGIN / BOAS VINDAS ---
   if (!user) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-4" style={{ backgroundColor: themeConfig.background }}>
@@ -195,29 +175,23 @@ export default function Layout({ children, currentPageName }) {
 
             <form onSubmit={handleAuth} className="space-y-4">
               <div className="space-y-2">
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                  <Input 
-                    type="email" 
-                    placeholder="Seu email" 
-                    className="pl-10 bg-black/20 border-white/10 text-white placeholder:text-gray-500"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                  <Input 
-                    type="password" 
-                    placeholder="Sua senha" 
-                    className="pl-10 bg-black/20 border-white/10 text-white placeholder:text-gray-500"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                  />
-                </div>
+                <Input 
+                  type="email" 
+                  placeholder="Seu email" 
+                  className="bg-black/20 border-white/10 text-white"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+                <Input 
+                  type="password" 
+                  placeholder="Sua senha" 
+                  className="bg-black/20 border-white/10 text-white"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                />
               </div>
 
               <Button type="submit" className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold h-11" disabled={authLoading}>
@@ -228,10 +202,7 @@ export default function Layout({ children, currentPageName }) {
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-400">
                 {authMode === 'login' ? 'Ainda não tem conta? ' : 'Já é um iniciado? '}
-                <button 
-                  onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
-                  className="text-purple-400 hover:text-purple-300 font-semibold underline hover:no-underline"
-                >
+                <button onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')} className="text-purple-400 hover:text-purple-300 font-semibold underline hover:no-underline">
                   {authMode === 'login' ? 'Criar agora' : 'Fazer login'}
                 </button>
               </p>
@@ -247,11 +218,9 @@ export default function Layout({ children, currentPageName }) {
 
   return (
     <div className="min-h-screen text-white" style={{ background: themeConfig.backgroundGradient }}>
-      {/* Estilos Globais e Componentes do App Logado */}
       <style>{`:root { --archetype-color: ${archColor}; --theme-accent: ${themeConfig.accent}; }`}</style>
       <PWAHeadTags />
       <PWAInstallPrompt />
-      {/* Header, Main, Nav e Player (código padrão mantido visualmente) */}
       
       <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl border-b" style={{ backgroundColor: themeConfig.background + 'F2', borderColor: themeConfig.border }}>
         <div className="max-w-7xl mx-auto px-3 h-14 md:h-16 flex items-center justify-between">
