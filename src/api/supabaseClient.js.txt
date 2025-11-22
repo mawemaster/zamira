@@ -1,0 +1,8 @@
+import { createClient } from '@supabase/supabase-js'
+
+// --- IMPORTANTE: Aqui vamos usar as Variáveis de Ambiente ---
+// Isso permite que a gente esconda as chaves na Vercel sem expor no código público
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
