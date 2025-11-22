@@ -47,4 +47,4 @@ export default function MysticInfo({ user }) {
       </Card>
     </div>
   );
-}
+} 
