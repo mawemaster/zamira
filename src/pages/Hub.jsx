@@ -1,152 +1,242 @@
 import React, { useState, useEffect } from "react";
-import { supabase } from "../api/supabaseClient";
-import { motion } from "framer-motion";
-import { Send, Heart, MessageCircle, Trash2 } from "lucide-react";
+import { supabase } from "../api/supabaseClient"; // Conexão Supabase
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import UserAvatar from "@/components/UserAvatar"; // Certifique-se que este componente existe ou remova se der erro
+import { Card } from "@/components/ui/card";
+import { Sparkles, Crown, Calendar, ChevronRight, Loader2, TrendingUp } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate, Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
-export default function Hub() {
-  const [posts, setPosts] = useState([]);
-  const [newPost, setNewPost] = useState("");
-  const [loading, setLoading] = useState(true);
+// Tente importar seus componentes antigos. 
+// Se algum der erro de "não encontrado", comente a linha.
+import PostCard from "../components/community/PostCard"; 
+import CreatePostModal from "../components/community/CreatePostModal";
+import MysticImageBanner from "../components/MysticImageBanner";
+import MysticInfo from "../components/MysticInfo";
+// import AdCarousel from "../components/ads/AdCarousel"; // Comentei pois não vi a pasta ads na sua print
+
+const archetypeColors = {
+  bruxa_natural: "#9333EA", sabio: "#F59E0B", guardiao_astral: "#3B82F6",
+  xama: "#10B981", navegador_cosmico: "#8B5CF6", alquimista: "#6366F1", none: "#64748B"
+};
+
+const getGreetingByTime = () => {
+  const hour = new Date().getHours();
+  if (hour >= 6 && hour < 12) return "Bom dia";
+  if (hour >= 12 && hour < 18) return "Boa tarde";
+  return "Boa noite";
+};
+
+export default function HubPage() {
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
+  const [posts, setPosts] = useState([]);
+  const [loadingUser, setLoadingUser] = useState(true);
+  const [loadingPosts, setLoadingPosts] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [greeting, setGreeting] = useState("");
+  const [isSticky, setIsSticky] = useState(false);
 
-  // 1. Carregar Usuário e Posts ao abrir
+  // 1. Carregar Usuário e Perfil
   useEffect(() => {
-    fetchUserAndPosts();
+    const loadUser = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          // Busca dados extras do perfil
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+            
+          const fullUser = { ...session.user, ...profile };
+          setUser(fullUser);
+          setGreeting(getGreetingByTime());
+        }
+      } catch (error) {
+        console.error("Erro ao carregar usuário:", error);
+      } finally {
+        setLoadingUser(false);
+      }
+    };
+
+    loadUser();
   }, []);
 
-  const fetchUserAndPosts = async () => {
-    setLoading(true);
-    
-    // Pega o usuário atual
-    const { data: { user } } = await supabase.auth.getUser();
-    setUser(user);
+  // 2. Carregar Posts
+  useEffect(() => {
+    fetchPosts();
+  }, []);
 
-    // Busca os posts do banco (do mais novo para o mais velho)
-    const { data, error } = await supabase
-      .from('posts')
-      .select('*') // Em breve faremos o join com profiles para mostrar nome e foto
-      .order('created_at', { ascending: false });
+  const fetchPosts = async () => {
+    setLoadingPosts(true);
+    try {
+      // Busca posts e tenta buscar dados do autor (se houver relacionamento configurado)
+      // Por enquanto pegamos o post puro
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20);
 
-    if (!error) {
-      setPosts(data);
-    }
-    setLoading(false);
-  };
+      if (error) throw error;
 
-  // 2. Função de Publicar
-  const handlePublish = async () => {
-    if (!newPost.trim() || !user) return;
+      // ADAPTADOR: Transforma os dados do Supabase no formato que seu PostCard antigo espera
+      const adaptedPosts = data.map(post => ({
+        ...post,
+        created_date: post.created_at, // O código antigo usava created_date
+        author_name: "Viajante", // Como ainda não fizemos o "join" com perfis, vai aparecer genérico
+        author_avatar: null, 
+        likes_count: post.likes_count || 0,
+        comments_count: 0
+      }));
 
-    const { error } = await supabase
-      .from('posts')
-      .insert([{ 
-        content: newPost, 
-        user_id: user.id 
-      }]);
-
-    if (error) {
-      alert("Erro ao postar: " + error.message);
-    } else {
-      setNewPost(""); // Limpa o campo
-      fetchUserAndPosts(); // Atualiza a lista
+      setPosts(adaptedPosts);
+    } catch (error) {
+      console.error("Erro ao buscar posts:", error);
+    } finally {
+      setLoadingPosts(false);
     }
   };
 
-  // 3. Função de Deletar (Só aparece para o dono)
-  const handleDelete = async (postId) => {
-    const { error } = await supabase
-      .from('posts')
-      .delete()
-      .eq('id', postId);
+  // 3. Criar Post
+  const handleCreatePost = async (postData) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .insert([{
+          content: postData.content, // Ajuste conforme seu modal retorna os dados
+          user_id: user.id,
+          likes_count: 0
+        }]);
+
+      if (error) throw error;
+
+      setShowCreateModal(false);
+      fetchPosts(); // Recarrega a lista
       
-    if (!error) fetchUserAndPosts();
+      // Dá um XPzinho (Opcional)
+      // await supabase.rpc('increment_xp', { amount: 5 }); 
+
+    } catch (error) {
+      alert("Erro ao criar post: " + error.message);
+    }
   };
+
+  // Efeito de Scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsSticky(window.scrollY > 100);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // --- RENDERIZAÇÃO ---
+
+  if (loadingUser) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[#02031C] via-slate-900 to-[#02031C]">
+        <Loader2 className="w-12 h-12 text-purple-500 animate-spin" />
+      </div>
+    );
+  }
+
+  const userName = user?.display_name || user?.email?.split('@')[0] || 'Viajante';
+  const archColor = archetypeColors[user?.archetype] || archetypeColors.none;
 
   return (
-    <div className="min-h-screen p-4 space-y-6 pt-6 pb-24">
-      {/* Cabeçalho */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-white">Feed Místico</h1>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-[#02031C] via-slate-900 to-[#02031C] text-white p-4 md:p-6 pb-24">
+      <div className="max-w-4xl mx-auto">
+        
+        {/* Cabeçalho Saudação */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 md:mb-6"
+        >
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-1 md:mb-2" style={{ color: archColor }}>
+            {greeting.toUpperCase()}, {userName.toUpperCase()}!
+          </h1>
+          <p className="text-gray-400 text-xs md:text-sm lg:text-base">
+            Sua jornada mística continua aqui.
+          </p>
+        </motion.div>
 
-      {/* Área de Criar Post */}
-      <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <Input 
-              placeholder="O que os astros dizem hoje?" 
-              className="bg-transparent border-none text-white placeholder:text-gray-500 focus-visible:ring-0"
-              value={newPost}
-              onChange={(e) => setNewPost(e.target.value)}
-            />
+        {/* Banner e Infos (Se os componentes existirem) */}
+        <div className="space-y-6">
+            {/* Se der erro nesses componentes, comente as linhas abaixo */}
+            <MysticInfo user={user} />
+            <MysticImageBanner user={user} /> 
+        </div>
+
+        <div className="h-6" />
+
+        {/* FEED */}
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl md:text-2xl font-bold flex items-center gap-2">
+                <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-purple-400" />
+                Feed da Comunidade
+            </h2>
+            <Button 
+                onClick={() => setShowCreateModal(true)}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+                size="sm"
+            >
+                Criar Post
+            </Button>
           </div>
-          <Button 
-            size="icon" 
-            onClick={handlePublish}
-            className="bg-purple-600 hover:bg-purple-700 rounded-full h-10 w-10"
-          >
-            <Send className="w-4 h-4" />
-          </Button>
+
+          <AnimatePresence>
+            {loadingPosts ? (
+              <div className="text-center py-12">
+                <Loader2 className="w-12 h-12 text-purple-500 animate-spin mx-auto mb-4" />
+                <p className="text-gray-400">Carregando emanações...</p>
+              </div>
+            ) : posts.length === 0 ? (
+              <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-purple-900/30 p-12 text-center">
+                <TrendingUp className="w-16 h-16 text-purple-500/50 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-purple-300 mb-2">
+                  Seja o primeiro viajante!
+                </h3>
+                <p className="text-gray-400 mb-6">
+                  Inicie a jornada compartilhando a primeira emanação mística
+                </p>
+                <Button 
+                  onClick={() => setShowCreateModal(true)}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                >
+                  Criar Post
+                </Button>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {posts.map((post) => (
+                    // Usando o PostCard antigo se ele existir e aceitar a prop 'post'
+                    <PostCard key={post.id} post={post} currentUser={user} />
+                ))}
+              </div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
-      {/* Lista de Posts */}
-      <div className="space-y-4">
-        {loading ? (
-          <p className="text-center text-gray-500 animate-pulse">Consultando os oráculos...</p>
-        ) : posts.length === 0 ? (
-          <div className="text-center p-8 bg-white/5 rounded-xl">
-            <p className="text-gray-400">O silêncio reina aqui. Seja o primeiro a falar!</p>
-          </div>
-        ) : (
-          posts.map((post) => (
-            <motion.div 
-              key={post.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-[#1e1b4b]/50 p-4 rounded-2xl border border-white/5 backdrop-blur-sm"
-            >
-              {/* Cabeçalho do Post */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500" />
-                  <div>
-                    <p className="text-sm font-semibold text-white">Viajante</p>
-                    <p className="text-[10px] text-gray-400">
-                      {new Date(post.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                    </p>
-                  </div>
-                </div>
-                {user && user.id === post.user_id && (
-                  <button onClick={() => handleDelete(post.id)} className="text-gray-600 hover:text-red-400">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-
-              {/* Conteúdo */}
-              <p className="text-gray-200 text-sm mb-4 leading-relaxed">
-                {post.content}
-              </p>
-
-              {/* Ações (Like/Comentar - Visual por enquanto) */}
-              <div className="flex items-center gap-4 pt-2 border-t border-white/5">
-                <button className="flex items-center gap-1 text-gray-400 hover:text-pink-500 transition">
-                  <Heart className="w-4 h-4" />
-                  <span className="text-xs">{post.likes_count || 0}</span>
-                </button>
-                <button className="flex items-center gap-1 text-gray-400 hover:text-blue-400 transition">
-                  <MessageCircle className="w-4 h-4" />
-                  <span className="text-xs">Comentar</span>
-                </button>
-              </div>
-            </motion.div>
-          ))
-        )}
-      </div>
+      {/* Modal de Criação */}
+      {showCreateModal && (
+        <CreatePostModal
+          user={user}
+          onClose={() => setShowCreateModal(false)}
+          onSubmit={handleCreatePost}
+          isLoading={false}
+        />
+      )}
     </div>
   );
 }
