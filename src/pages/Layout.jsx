@@ -1,11 +1,27 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-// CORREÇÃO AQUI: Caminho relativo direto e "from" correto
+// Correção do caminho e do comando import
 import { supabase } from "../api/supabaseClient"; 
 import { 
-  Home, Compass, MessageCircle, Bell, Store, User as UserIcon, Settings,
-  Sparkles, Eye, Coins, Backpack, Crown, Shield, Headphones, Megaphone, LogIn, Mail, Lock
+  Home, 
+  Compass, 
+  MessageCircle, 
+  Bell, 
+  Store, 
+  User as UserIcon, 
+  Settings,
+  Sparkles, 
+  Eye, 
+  Coins, 
+  Backpack, 
+  Crown, 
+  Shield, 
+  Headphones, 
+  Megaphone, 
+  LogIn, 
+  Mail, 
+  Lock
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
@@ -175,23 +191,29 @@ export default function Layout({ children, currentPageName }) {
 
             <form onSubmit={handleAuth} className="space-y-4">
               <div className="space-y-2">
-                <Input 
-                  type="email" 
-                  placeholder="Seu email" 
-                  className="bg-black/20 border-white/10 text-white"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-                <Input 
-                  type="password" 
-                  placeholder="Sua senha" 
-                  className="bg-black/20 border-white/10 text-white"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                />
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                  <Input 
+                    type="email" 
+                    placeholder="Seu email" 
+                    className="pl-10 bg-black/20 border-white/10 text-white"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                  <Input 
+                    type="password" 
+                    placeholder="Sua senha" 
+                    className="pl-10 bg-black/20 border-white/10 text-white"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={6}
+                  />
+                </div>
               </div>
 
               <Button type="submit" className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold h-11" disabled={authLoading}>
