@@ -173,7 +173,7 @@ export default function Layout({ children, currentPageName }) {
   const [audioPlaylist, setAudioPlaylist] = useState([]);
   const [currentAudioIndex, setCurrentAudioIndex] = useState(0);
   const [themeConfig, setThemeConfig] = useState(THEME_CONFIGS.dark);
-  const [isLoading, setIsLoading] = useState(true); // Controle de carregamento
+  const [isLoading, setIsLoading] = useState(true); 
    
   const shownNotificationsRef = useRef(new Set());
   const notificationGroupsRef = useRef(new Map());
@@ -191,19 +191,20 @@ export default function Layout({ children, currentPageName }) {
       setIsLoading(true);
       await loadUser();
       setIsLoading(false);
-      loadNotifications();
-      loadUnreadRavens();
+      // loadNotifications(); // Desativado pois requer banco
+      // loadUnreadRavens(); // Desativado pois requer banco
     };
     init();
     
-    const interval = setInterval(() => {
-      loadNotifications();
-      updateLastSeen();
-      loadUser();
-      loadUnreadRavens();
-    }, 5000);
+    // Intervalo desativado para evitar erros no console sem banco de dados
+    // const interval = setInterval(() => {
+    //   loadNotifications();
+    //   updateLastSeen();
+    //   loadUser();
+    //   loadUnreadRavens();
+    // }, 5000);
     
-    return () => clearInterval(interval);
+    // return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -234,125 +235,52 @@ export default function Layout({ children, currentPageName }) {
     return () => window.removeEventListener('playGlobalAudio', handlePlayGlobalAudio);
   }, []);
 
+  // --- FUNÇÃO MODIFICADA PARA BYPASS (LOGIN FALSO) ---
   const loadUser = async () => {
-    try {
-      const currentUser = await base44.auth.me();
-      
-      if (!currentUser || !currentUser.id) {
-        // Se não achou usuário, apenas retorna. O estado isLoading vai cuidar da tela.
-        return;
+    // Cria um usuário falso na memória para o app funcionar sem banco de dados
+    const fakeUser = {
+      id: "user-bypass-001",
+      full_name: "Viajante Místico",
+      display_name: "Viajante",
+      email: "admin@zamira.com",
+      level: 10,
+      ouros: 1000,
+      archetype: "bruxa_natural", // Você pode mudar para: sabio, xama, alquimista, etc.
+      is_pro_subscriber: true,
+      online_status: "online",
+      theme: "dark",
+      detected_location: {
+        country: "Brazil",
+        state: "RJ",
+        city: "Rio de Janeiro",
+        timezone: "America/Sao_Paulo"
       }
-      
-      if (!currentUser.online_status || currentUser.online_status === 'offline') {
-        await base44.auth.updateMe({
-          online_status: 'online',
-          last_seen: new Date().toISOString()
-        });
-        currentUser.online_status = 'online';
-        currentUser.last_seen = new Date().toISOString();
-      }
-      
-      setUser(currentUser);
-      
-      const userTheme = currentUser.theme || 'dark';
-      const theme = THEME_CONFIGS[userTheme] || THEME_CONFIGS.dark;
-      setThemeConfig(theme);
-      document.body.setAttribute('data-theme', userTheme);
-      document.body.style.background = theme.backgroundGradient;
+    };
 
-      if (!currentUser.detected_location) {
-        detectUserLocation(currentUser);
-      }
-    } catch (error) {
-      console.error("Erro ao carregar usuário:", error);
-    }
+    console.log("Modo Bypass: Usuário carregado manualmente.");
+    setUser(fakeUser);
+    
+    const theme = THEME_CONFIGS[fakeUser.theme] || THEME_CONFIGS.dark;
+    setThemeConfig(theme);
+    document.body.setAttribute('data-theme', fakeUser.theme);
+    document.body.style.background = theme.backgroundGradient;
   };
+  // ---------------------------------------------------
 
   const updateLastSeen = async () => {
-    try {
-      if (user?.id) {
-        await base44.auth.updateMe({
-          last_seen: new Date().toISOString()
-        });
-      }
-    } catch (error) {
-      // Ignorar erro silencioso
-    }
+    // Função desativada no modo bypass
   };
 
   const detectUserLocation = async (currentUser) => {
-    try {
-      const response = await base44.functions.invoke('getGeolocation');
-      
-      if (response.data.success && response.data.location) {
-        const location = response.data.location;
-        
-        await base44.auth.updateMe({
-          detected_location: {
-            country: location.country,
-            state: location.state,
-            city: location.city,
-            timezone: 'America/Sao_Paulo'
-          }
-        });
-
-        setUser({
-          ...currentUser,
-          detected_location: {
-            country: location.country,
-            state: location.state,
-            city: location.city,
-            timezone: 'America/Sao_Paulo'
-          }
-        });
-      }
-    } catch (error) {
-      console.error("Erro ao detectar localização:", error);
-    }
+    // Função desativada no modo bypass
   };
 
   const loadNotifications = async () => {
-    if (!user?.id) return;
-    try {
-      const notifs = await base44.entities.Notification.filter(
-        { user_id: user.id },
-        "-created_date",
-        30
-      );
-      
-      // Lógica simplificada de notificação
-      const newNotifs = notifs.filter(n => {
-        if (!n?.id) return false;
-        const alreadyShown = shownNotificationsRef.current.has(n.id);
-        const isRecent = (new Date() - new Date(n.created_date)) < 60000;
-        return !alreadyShown && isRecent && !n.is_read;
-      });
-
-      if (newNotifs.length > 0) {
-        setToastNotifications(prev => [...prev, ...newNotifs]);
-        newNotifs.forEach(n => {
-          if (n?.id) shownNotificationsRef.current.add(n.id);
-        });
-      }
-
-      setNotifications(notifs);
-      setUnreadCount(notifs.filter(n => !n.is_read).length);
-    } catch (error) {
-      console.error("Erro ao carregar notificações:", error);
-    }
+    // Função desativada no modo bypass
   };
 
   const loadUnreadRavens = async () => {
-    if (!user?.id) return;
-    try {
-      const ravens = await base44.entities.Raven.filter({
-        recipient_id: user.id,
-        is_read: false
-      });
-      setUnreadRavensCount(ravens.length);
-    } catch (error) {
-      console.error("Erro ao carregar corvos:", error);
-    }
+    // Função desativada no modo bypass
   };
 
   const removeToastNotification = (id) => {
@@ -388,11 +316,8 @@ export default function Layout({ children, currentPageName }) {
   };
 
   const handleLogout = async () => {
-    await base44.auth.updateMe({ 
-      online_status: 'offline',
-      last_seen: new Date().toISOString()
-    });
-    await base44.auth.logout(createPageUrl("Home"));
+    // Simplesmente recarrega a página para "deslogar"
+    window.location.href = createPageUrl("Home");
   };
 
   const handleNotificationClick = (e) => {
@@ -430,8 +355,9 @@ export default function Layout({ children, currentPageName }) {
             <h2 className="text-2xl font-bold text-white mb-4">Bem-vindo de volta</h2>
             <p className="text-gray-400 mb-8">Para acessar o portal místico, você precisa se conectar.</p>
             
+            {/* BOTÃO CORRIGIDO PARA IR AO HUB */}
             <Button 
-              onClick={() => navigate(createPageUrl("Home"))}
+              onClick={() => navigate(createPageUrl("Hub"))}
               className="w-full h-12 text-lg bg-purple-600 hover:bg-purple-700 text-white"
             >
               <LogIn className="w-5 h-5 mr-2" />
