@@ -17,7 +17,8 @@ import {
   Crown,
   Shield,
   Headphones,
-  Megaphone
+  Megaphone,
+  LogIn
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -30,7 +31,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 
-// --- ÁREA CORRIGIDA (Todos com ../) ---
 import XPBar from "../components/XPBar";
 import UserAvatar from "../components/UserAvatar";
 import NotificationToast from "../components/NotificationToast";
@@ -41,7 +41,6 @@ import PWAHeadTags from "../components/PWAHeadTags";
 import QuestTracker from "../components/QuestTracker";
 import AdminGlobalMessage from "../components/AdminGlobalMessage";
 import RavenNotificationIcon from "../components/ravens/RavenNotificationIcon";
-// --------------------------------------
 
 import { setDefaultOptions } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -174,6 +173,7 @@ export default function Layout({ children, currentPageName }) {
   const [audioPlaylist, setAudioPlaylist] = useState([]);
   const [currentAudioIndex, setCurrentAudioIndex] = useState(0);
   const [themeConfig, setThemeConfig] = useState(THEME_CONFIGS.dark);
+  const [isLoading, setIsLoading] = useState(true); // Controle de carregamento
    
   const shownNotificationsRef = useRef(new Set());
   const notificationGroupsRef = useRef(new Map());
@@ -187,9 +187,14 @@ export default function Layout({ children, currentPageName }) {
   }, [location.pathname]);
 
   useEffect(() => {
-    loadUser();
-    loadNotifications();
-    loadUnreadRavens();
+    const init = async () => {
+      setIsLoading(true);
+      await loadUser();
+      setIsLoading(false);
+      loadNotifications();
+      loadUnreadRavens();
+    };
+    init();
     
     const interval = setInterval(() => {
       loadNotifications();
@@ -234,7 +239,7 @@ export default function Layout({ children, currentPageName }) {
       const currentUser = await base44.auth.me();
       
       if (!currentUser || !currentUser.id) {
-        console.error("Usuário sem ID válido");
+        // Se não achou usuário, apenas retorna. O estado isLoading vai cuidar da tela.
         return;
       }
       
@@ -265,11 +270,13 @@ export default function Layout({ children, currentPageName }) {
 
   const updateLastSeen = async () => {
     try {
-      await base44.auth.updateMe({
-        last_seen: new Date().toISOString()
-      });
+      if (user?.id) {
+        await base44.auth.updateMe({
+          last_seen: new Date().toISOString()
+        });
+      }
     } catch (error) {
-      console.error("Erro ao atualizar last_seen:", error);
+      // Ignorar erro silencioso
     }
   };
 
@@ -305,44 +312,20 @@ export default function Layout({ children, currentPageName }) {
   };
 
   const loadNotifications = async () => {
+    if (!user?.id) return;
     try {
-      const currentUser = await base44.auth.me();
-      
-      if (!currentUser?.id) {
-        console.error("Não foi possível carregar notificações: usuário sem ID");
-        return;
-      }
-      
       const notifs = await base44.entities.Notification.filter(
-        { user_id: currentUser.id },
+        { user_id: user.id },
         "-created_date",
         30
       );
       
+      // Lógica simplificada de notificação
       const newNotifs = notifs.filter(n => {
         if (!n?.id) return false;
-        
         const alreadyShown = shownNotificationsRef.current.has(n.id);
         const isRecent = (new Date() - new Date(n.created_date)) < 60000;
-        const isUnread = !n.is_read;
-        const groupKey = `${n.type}_${n.from_user_id || 'system'}`;
-        const now = Date.now();
-        const existingGroup = notificationGroupsRef.current.get(groupKey);
-        
-        if (existingGroup && (now - existingGroup.timestamp) < 30000) {
-          shownNotificationsRef.current.add(n.id);
-          return false;
-        }
-        
-        if (!alreadyShown && isRecent && isUnread) {
-          notificationGroupsRef.current.set(groupKey, {
-            timestamp: now,
-            notificationId: n.id
-          });
-          return true;
-        }
-        
-        return false;
+        return !alreadyShown && isRecent && !n.is_read;
       });
 
       if (newNotifs.length > 0) {
@@ -360,15 +343,12 @@ export default function Layout({ children, currentPageName }) {
   };
 
   const loadUnreadRavens = async () => {
+    if (!user?.id) return;
     try {
-      const currentUser = await base44.auth.me();
-      if (!currentUser?.id) return;
-      
       const ravens = await base44.entities.Raven.filter({
-        recipient_id: currentUser.id,
+        recipient_id: user.id,
         is_read: false
       });
-      
       setUnreadRavensCount(ravens.length);
     } catch (error) {
       console.error("Erro ao carregar corvos:", error);
@@ -431,19 +411,41 @@ export default function Layout({ children, currentPageName }) {
     { icon: UserIcon, label: "Conta", path: "MinhaConta" }
   ];
 
+  // Tela de Carregamento ou Login
   if (!user || !user.id) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: themeConfig.background }}>
-        <div className="text-center">
-          <Sparkles className="w-12 h-12 text-purple-500 animate-pulse mx-auto mb-4" />
-          <p className="text-gray-300">Carregando o portal...</p>
-        </div>
+      <div className="min-h-screen flex flex-col items-center justify-center px-4" style={{ backgroundColor: themeConfig.background }}>
+        {isLoading ? (
+          <div className="text-center">
+            <Sparkles className="w-12 h-12 text-purple-500 animate-pulse mx-auto mb-4" />
+            <p className="text-gray-300">Carregando o portal...</p>
+          </div>
+        ) : (
+          <div className="text-center max-w-md w-full bg-white/5 p-8 rounded-2xl border border-white/10 backdrop-blur-sm">
+            <img 
+              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/690e5f6f991e09e82bef3795/a3f627646_imgi_2_337f3cf9e282bc41c87500e885414629.png" 
+              alt="Zamira" 
+              className="h-16 mx-auto mb-6 object-contain"
+            />
+            <h2 className="text-2xl font-bold text-white mb-4">Bem-vindo de volta</h2>
+            <p className="text-gray-400 mb-8">Para acessar o portal místico, você precisa se conectar.</p>
+            
+            <Button 
+              onClick={() => navigate(createPageUrl("Home"))}
+              className="w-full h-12 text-lg bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              <LogIn className="w-5 h-5 mr-2" />
+              Entrar no Portal
+            </Button>
+          </div>
+        )}
       </div>
     );
   }
 
   const isAdmin = ADMIN_EMAILS.includes(user?.email);
 
+  // Renderização Principal (quando logado)
   return (
     <div className="min-h-screen text-white" style={{ background: themeConfig.backgroundGradient }}>
       <style>{`
@@ -457,11 +459,9 @@ export default function Layout({ children, currentPageName }) {
           --theme-border: ${themeConfig.border};
           --theme-text-secondary: ${themeConfig.textSecondary};
         }
-        
         body {
           background: ${themeConfig.backgroundGradient} !important;
         }
-        
         h1 { font-size: clamp(1.5rem, 5vw, 2.5rem); }
         h2 { font-size: clamp(1.25rem, 4vw, 2rem); }
         h3 { font-size: clamp(1.125rem, 3.5vw, 1.75rem); }
