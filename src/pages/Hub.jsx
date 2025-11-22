@@ -1,80 +1,151 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { supabase } from "../api/supabaseClient";
 import { motion } from "framer-motion";
-import { Sparkles, Star, Map, MessageCircle } from "lucide-react";
+import { Send, Heart, MessageCircle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
-import { createPageUrl } from "@/utils";
+import { Input } from "@/components/ui/input";
+import UserAvatar from "@/components/UserAvatar"; // Certifique-se que este componente existe ou remova se der erro
 
 export default function Hub() {
-  const navigate = useNavigate();
+  const [posts, setPosts] = useState([]);
+  const [newPost, setNewPost] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+
+  // 1. Carregar Usuário e Posts ao abrir
+  useEffect(() => {
+    fetchUserAndPosts();
+  }, []);
+
+  const fetchUserAndPosts = async () => {
+    setLoading(true);
+    
+    // Pega o usuário atual
+    const { data: { user } } = await supabase.auth.getUser();
+    setUser(user);
+
+    // Busca os posts do banco (do mais novo para o mais velho)
+    const { data, error } = await supabase
+      .from('posts')
+      .select('*') // Em breve faremos o join com profiles para mostrar nome e foto
+      .order('created_at', { ascending: false });
+
+    if (!error) {
+      setPosts(data);
+    }
+    setLoading(false);
+  };
+
+  // 2. Função de Publicar
+  const handlePublish = async () => {
+    if (!newPost.trim() || !user) return;
+
+    const { error } = await supabase
+      .from('posts')
+      .insert([{ 
+        content: newPost, 
+        user_id: user.id 
+      }]);
+
+    if (error) {
+      alert("Erro ao postar: " + error.message);
+    } else {
+      setNewPost(""); // Limpa o campo
+      fetchUserAndPosts(); // Atualiza a lista
+    }
+  };
+
+  // 3. Função de Deletar (Só aparece para o dono)
+  const handleDelete = async (postId) => {
+    const { error } = await supabase
+      .from('posts')
+      .delete()
+      .eq('id', postId);
+      
+    if (!error) fetchUserAndPosts();
+  };
 
   return (
-    <div className="min-h-screen p-4 space-y-6 pt-6">
-      {/* Cabeçalho de Boas Vindas */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center space-y-2"
-      >
-        <h1 className="text-2xl font-bold text-white">Portal Místico</h1>
-        <p className="text-gray-400 text-sm">
-          Seu universo de autoconhecimento começa agora.
-        </p>
-      </motion.div>
-
-      {/* Card de Status */}
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.1 }}
-        className="bg-gradient-to-br from-purple-900/50 to-indigo-900/50 p-6 rounded-2xl border border-white/10 backdrop-blur-sm relative overflow-hidden"
-      >
-        <div className="absolute top-0 right-0 p-4 opacity-20">
-          <Sparkles className="w-24 h-24 text-purple-400" />
-        </div>
-        <h2 className="text-xl font-semibold text-white mb-2">Sua Jornada</h2>
-        <p className="text-gray-300 text-sm mb-4">
-          Você está no início. O banco de dados está conectado, mas ainda não temos postagens no feed.
-        </p>
-        <Button 
-          onClick={() => navigate(createPageUrl("Explorar"))}
-          className="bg-white text-purple-900 hover:bg-gray-100 w-full"
-        >
-          <Map className="w-4 h-4 mr-2" />
-          Explorar o Mapa
-        </Button>
-      </motion.div>
-
-      {/* Grid de Ações Rápidas */}
-      <div className="grid grid-cols-2 gap-4">
-        <motion.div 
-          whileTap={{ scale: 0.98 }}
-          className="bg-white/5 p-4 rounded-xl border border-white/10 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-white/10 transition"
-          onClick={() => navigate(createPageUrl("TiragemDiaria"))}
-        >
-          <div className="w-10 h-10 rounded-full bg-pink-500/20 flex items-center justify-center">
-            <Star className="w-5 h-5 text-pink-400" />
-          </div>
-          <span className="text-sm font-medium text-gray-200">Tiragem Diária</span>
-        </motion.div>
-
-        <motion.div 
-          whileTap={{ scale: 0.98 }}
-          className="bg-white/5 p-4 rounded-xl border border-white/10 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-white/10 transition"
-          onClick={() => navigate(createPageUrl("Chat"))}
-        >
-          <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
-            <MessageCircle className="w-5 h-5 text-blue-400" />
-          </div>
-          <span className="text-sm font-medium text-gray-200">Chat Místico</span>
-        </motion.div>
+    <div className="min-h-screen p-4 space-y-6 pt-6 pb-24">
+      {/* Cabeçalho */}
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-white">Feed Místico</h1>
       </div>
 
-      {/* Aviso de Construção */}
-      <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
-        <p className="text-xs text-yellow-200">
-          🚧 <strong>Modo Construção:</strong> Agora precisamos criar as tabelas de "Posts" no Supabase para o feed funcionar de verdade.
-        </p>
+      {/* Área de Criar Post */}
+      <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <Input 
+              placeholder="O que os astros dizem hoje?" 
+              className="bg-transparent border-none text-white placeholder:text-gray-500 focus-visible:ring-0"
+              value={newPost}
+              onChange={(e) => setNewPost(e.target.value)}
+            />
+          </div>
+          <Button 
+            size="icon" 
+            onClick={handlePublish}
+            className="bg-purple-600 hover:bg-purple-700 rounded-full h-10 w-10"
+          >
+            <Send className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Lista de Posts */}
+      <div className="space-y-4">
+        {loading ? (
+          <p className="text-center text-gray-500 animate-pulse">Consultando os oráculos...</p>
+        ) : posts.length === 0 ? (
+          <div className="text-center p-8 bg-white/5 rounded-xl">
+            <p className="text-gray-400">O silêncio reina aqui. Seja o primeiro a falar!</p>
+          </div>
+        ) : (
+          posts.map((post) => (
+            <motion.div 
+              key={post.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-[#1e1b4b]/50 p-4 rounded-2xl border border-white/5 backdrop-blur-sm"
+            >
+              {/* Cabeçalho do Post */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500" />
+                  <div>
+                    <p className="text-sm font-semibold text-white">Viajante</p>
+                    <p className="text-[10px] text-gray-400">
+                      {new Date(post.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    </p>
+                  </div>
+                </div>
+                {user && user.id === post.user_id && (
+                  <button onClick={() => handleDelete(post.id)} className="text-gray-600 hover:text-red-400">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Conteúdo */}
+              <p className="text-gray-200 text-sm mb-4 leading-relaxed">
+                {post.content}
+              </p>
+
+              {/* Ações (Like/Comentar - Visual por enquanto) */}
+              <div className="flex items-center gap-4 pt-2 border-t border-white/5">
+                <button className="flex items-center gap-1 text-gray-400 hover:text-pink-500 transition">
+                  <Heart className="w-4 h-4" />
+                  <span className="text-xs">{post.likes_count || 0}</span>
+                </button>
+                <button className="flex items-center gap-1 text-gray-400 hover:text-blue-400 transition">
+                  <MessageCircle className="w-4 h-4" />
+                  <span className="text-xs">Comentar</span>
+                </button>
+              </div>
+            </motion.div>
+          ))
+        )}
       </div>
     </div>
   );
