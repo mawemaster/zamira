@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Sparkles, Moon, Sun, CloudRain, Cloud, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import axios from "axios"; 
+import axios from "axios";
 import lune from "lune";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -16,7 +16,7 @@ import { ptBR } from "date-fns/locale";
 // import MysticInfo from "../components/MysticInfo"; 
 // -----------------------------------------------
 
-const WEATHER_API_KEY = "bfaf57dd1ed477eb4aff9f6b85ad28d3"; 
+const WEATHER_API_KEY = "bfaf57dd1ed477eb4aff9f6b85ad28d3";
 
 const getGreetingByTime = () => {
   const hour = new Date().getHours();
@@ -49,7 +49,7 @@ export default function HubPage() {
           .select('*')
           .eq('id', session.user.id)
           .single();
-        
+
         const fullUser = profile ? { ...session.user, ...profile } : session.user;
         setUser(fullUser);
         setGreeting(getGreetingByTime());
@@ -58,7 +58,7 @@ export default function HubPage() {
         if (fullUser.city) {
           fetchWeather(fullUser.city);
         } else {
-            fetchWeather("São Paulo"); // Padrão se não tiver cidade
+          fetchWeather("São Paulo"); // Padrão se não tiver cidade
         }
 
         // 3. Calcular Lua
@@ -88,7 +88,7 @@ export default function HubPage() {
   return (
     <div className="min-h-screen bg-[#02031C] text-white p-4 md:p-6 pb-24">
       <div className="max-w-4xl mx-auto space-y-6">
-        
+
         {/* Saudação */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
@@ -99,25 +99,25 @@ export default function HubPage() {
 
         {/* Widgets de Teste */}
         <div className="grid grid-cols-2 gap-3">
-            <Card className="bg-white/5 border-white/10 p-4 text-center">
-                <h3 className="text-gray-400 text-xs">Clima Atual</h3>
-                <div className="text-xl font-bold">{weather ? Math.round(weather.main.temp) + "°C" : "--"}</div>
-            </Card>
-            <Card className="bg-white/5 border-white/10 p-4 text-center">
-                <h3 className="text-gray-400 text-xs">Lua</h3>
-                <div className="text-xl font-bold">{moonPhase}</div>
-            </Card>
+          <Card className="bg-white/5 border-white/10 p-4 text-center">
+            <h3 className="text-gray-400 text-xs">Clima Atual</h3>
+            <div className="text-xl font-bold">{weather ? Math.round(weather.main.temp) + "°C" : "--"}</div>
+          </Card>
+          <Card className="bg-white/5 border-white/10 p-4 text-center">
+            <h3 className="text-gray-400 text-xs">Lua</h3>
+            <div className="text-xl font-bold">{moonPhase}</div>
+          </Card>
         </div>
 
         {/* Aviso de Área Limpa */}
         <div className="p-4 bg-green-900/20 border border-green-500/30 rounded-lg">
-            <p className="text-green-400 text-sm">
-                ✅ <strong>Hub Carregado!</strong> <br/>
-                Agora podemos reativar o <code>MysticInfo</code> e o <code>Feed</code> um por um.
-            </p>
+          <p className="text-green-400 text-sm">
+            ✅ <strong>Hub Carregado!</strong> <br />
+            Agora podemos reativar o <code>MysticInfo</code> e o <code>Feed</code> um por um.
+          </p>
         </div>
 
       </div>
     </div>
   );
-}
+} 
