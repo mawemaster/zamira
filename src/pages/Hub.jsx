@@ -1,123 +1,50 @@
-import React, { useState, useEffect } from "react";
-import { supabase } from "../api/supabaseClient";
-import { Button } from "@/components/ui/button";
+import React from "react";
 import { Card } from "@/components/ui/card";
-import { Sparkles, Moon, Sun, CloudRain, Cloud, MapPin } from "lucide-react";
-import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import lune from "lune";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { Progress } from "@/components/ui/progress";
+import { Crown, Star, Zap } from "lucide-react";
 
-// --- DESATIVANDO TEMPORARIAMENTE PARA TESTE ---
-// import PostCard from "../components/community/PostCard";
-// import CreatePostModal from "../components/community/CreatePostModal";
-// import MysticInfo from "../components/MysticInfo"; 
-// -----------------------------------------------
+export default function MysticInfo({ user }) {
+  if (!user) return null;
 
-const WEATHER_API_KEY = "bfaf57dd1ed477eb4aff9f6b85ad28d3";
-
-const getGreetingByTime = () => {
-  const hour = new Date().getHours();
-  if (hour >= 5 && hour < 12) return "Bom dia";
-  if (hour >= 12 && hour < 18) return "Boa tarde";
-  return "Boa noite";
-};
-
-export default function HubPage() {
-  const navigate = useNavigate();
-  const [user, setUser] = useState(null);
-  const [weather, setWeather] = useState(null);
-  const [moonPhase, setMoonPhase] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [greeting, setGreeting] = useState("");
-
-  useEffect(() => {
-    loadAllData();
-  }, []);
-
-  const loadAllData = async () => {
-    setLoading(true);
-    try {
-      // 1. Carregar Usuário
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        // Tenta buscar perfil, se não tiver, usa dados da sessão
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-
-        const fullUser = profile ? { ...session.user, ...profile } : session.user;
-        setUser(fullUser);
-        setGreeting(getGreetingByTime());
-
-        // 2. Carregar Clima
-        if (fullUser.city) {
-          fetchWeather(fullUser.city);
-        } else {
-          fetchWeather("São Paulo"); // Padrão se não tiver cidade
-        }
-
-        // 3. Calcular Lua
-        const currentMoon = lune.phase_hunt(new Date());
-        setMoonPhase("Nova"); // Simplificado para teste
-      }
-    } catch (error) {
-      console.error("Erro ao carregar:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchWeather = async (city) => {
-    try {
-      const response = await axios.get(
-        `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${WEATHER_API_KEY}&units=metric&lang=pt_br`
-      );
-      setWeather(response.data);
-    } catch (error) {
-      console.error("Erro Clima:", error);
-    }
-  };
-
-  if (loading) return <div className="min-h-screen bg-[#02031C] text-white flex items-center justify-center">Carregando...</div>;
+  const currentLevel = user.level || 1;
+  const currentXP = user.xp || 0;
+  const xpToNextLevel = currentLevel * 100;
+  const progress = Math.min((currentXP / xpToNextLevel) * 100, 100);
 
   return (
-    <div className="min-h-screen bg-[#02031C] text-white p-4 md:p-6 pb-24">
-      <div className="max-w-4xl mx-auto space-y-6">
-
-        {/* Saudação */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
-            {greeting}, {user?.email?.split('@')[0]}!
-          </h1>
-          <p className="text-gray-400 text-sm">O sistema está vivo.</p>
-        </motion.div>
-
-        {/* Widgets de Teste */}
-        <div className="grid grid-cols-2 gap-3">
-          <Card className="bg-white/5 border-white/10 p-4 text-center">
-            <h3 className="text-gray-400 text-xs">Clima Atual</h3>
-            <div className="text-xl font-bold">{weather ? Math.round(weather.main.temp) + "°C" : "--"}</div>
-          </Card>
-          <Card className="bg-white/5 border-white/10 p-4 text-center">
-            <h3 className="text-gray-400 text-xs">Lua</h3>
-            <div className="text-xl font-bold">{moonPhase}</div>
-          </Card>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <Card className="bg-gradient-to-br from-purple-900/50 to-indigo-900/50 border-purple-500/30 p-4 flex items-center gap-4">
+        <div className="w-12 h-12 rounded-full bg-purple-600/20 flex items-center justify-center border border-purple-500/50">
+          <Crown className="w-6 h-6 text-purple-400" />
         </div>
-
-        {/* Aviso de Área Limpa */}
-        <div className="p-4 bg-green-900/20 border border-green-500/30 rounded-lg">
-          <p className="text-green-400 text-sm">
-            ✅ <strong>Hub Carregado!</strong> <br />
-            Agora podemos reativar o <code>MysticInfo</code> e o <code>Feed</code> um por um.
-          </p>
+        <div className="flex-1">
+          <div className="flex justify-between items-center mb-1">
+            <span className="text-sm font-bold text-white">Nível {currentLevel}</span>
+            <span className="text-xs text-purple-300">{currentXP}/{xpToNextLevel} XP</span>
+          </div>
+          <Progress value={progress} className="h-2 bg-purple-950" indicatorClassName="bg-purple-500" />
         </div>
+      </Card>
 
-      </div>
+      <Card className="bg-gradient-to-br from-yellow-900/50 to-amber-900/50 border-yellow-500/30 p-4 flex items-center gap-4">
+        <div className="w-12 h-12 rounded-full bg-yellow-600/20 flex items-center justify-center border border-yellow-500/50">
+          <Star className="w-6 h-6 text-yellow-400" />
+        </div>
+        <div>
+          <p className="text-xs text-yellow-200 uppercase font-bold tracking-wider">Seus Ouros</p>
+          <p className="text-2xl font-bold text-white">{user.ouros || 0}</p>
+        </div>
+      </Card>
+
+      <Card className="bg-gradient-to-br from-blue-900/50 to-cyan-900/50 border-blue-500/30 p-4 flex items-center gap-4 md:col-span-1 col-span-2 md:col-auto">
+        <div className="w-12 h-12 rounded-full bg-blue-600/20 flex items-center justify-center border border-blue-500/50">
+          <Zap className="w-6 h-6 text-blue-400" />
+        </div>
+        <div>
+          <p className="text-xs text-blue-200 uppercase font-bold tracking-wider">Ofensiva</p>
+          <p className="text-xl font-bold text-white">{user.daily_streak || 0} dias</p>
+        </div>
+      </Card>
     </div>
   );
 }
