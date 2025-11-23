@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Loader2, Save, LogOut, Camera, User, MapPin, Calendar, Clock, Star } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "sonner"; // Usando sonner que já está no projeto
 import { useNavigate } from "react-router-dom";
 
 export default function MinhaConta() {
@@ -57,9 +57,9 @@ export default function MinhaConta() {
         setFormData({
           full_name: data.full_name || "",
           username: data.display_name || "",
-          bio: data.bio || "", // Precisamos garantir que essa coluna exista ou criar
+          bio: data.bio || "",
           birth_date: data.birth_date || "",
-          birth_time: data.birth_time || "", // Precisamos garantir que essa coluna exista
+          birth_time: data.birth_time || "",
           city: data.city || "",
           avatar_url: data.avatar_url || ""
         });
@@ -82,17 +82,17 @@ export default function MinhaConta() {
         display_name: formData.username,
         city: formData.city,
         birth_date: formData.birth_date,
-        // bio e birth_time dependem de adicionar colunas no banco,
-        // por enquanto vamos salvar o que temos garantido no SQL anterior
+        birth_time: formData.birth_time,
+        bio: formData.bio,
         updated_at: new Date(),
       };
 
       const { error } = await supabase.from('profiles').upsert(updates);
 
       if (error) throw error;
-      toast.success("Perfil atualizado com sucesso!");
+      alert("Perfil atualizado com sucesso! ✨"); // Usando alert simples para garantir feedback
     } catch (error) {
-      toast.error("Erro ao atualizar: " + error.message);
+      alert("Erro ao atualizar: " + error.message);
     } finally {
       setSaving(false);
     }
@@ -209,6 +209,18 @@ export default function MinhaConta() {
                   </div>
                 </div>
                 <div className="space-y-2">
+                  <label className="text-xs text-gray-400 uppercase font-bold">Horário de Nascimento</label>
+                  <div className="relative">
+                    <Clock className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
+                    <Input
+                      type="time"
+                      value={formData.birth_time}
+                      onChange={(e) => setFormData({ ...formData, birth_time: e.target.value })}
+                      className="pl-9 bg-black/20 border-white/10 text-white"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2 md:col-span-2">
                   <label className="text-xs text-gray-400 uppercase font-bold">Cidade de Nascimento</label>
                   <div className="relative">
                     <MapPin className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
@@ -216,7 +228,7 @@ export default function MinhaConta() {
                       value={formData.city}
                       onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                       className="pl-9 bg-black/20 border-white/10 text-white"
-                      placeholder="Ex: São Paulo, SP"
+                      placeholder="Ex: Rio de Janeiro, RJ"
                     />
                   </div>
                 </div>
@@ -241,7 +253,7 @@ export default function MinhaConta() {
 
           </TabsContent>
 
-          {/* Conteúdo placeholder para outras abas */}
+          {/* Placeholders para outras abas */}
           <TabsContent value="jornada" className="text-center py-10 text-gray-500">
             Em breve: Seu histórico e conquistas.
           </TabsContent>
