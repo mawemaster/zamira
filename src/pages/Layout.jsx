@@ -21,7 +21,8 @@ import {
   Megaphone, 
   LogIn, 
   Mail, 
-  Lock
+  Lock,
+  Heart
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
@@ -77,6 +78,8 @@ export default function Layout({ children, currentPageName }) {
   const [password, setPassword] = useState("");
   const [authMode, setAuthMode] = useState("login");
   const [authLoading, setAuthLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [authError, setAuthError] = useState("");
 
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -140,6 +143,7 @@ export default function Layout({ children, currentPageName }) {
   const handleAuth = async (e) => {
     e.preventDefault();
     setAuthLoading(true);
+    setAuthError("");
     try {
       if (authMode === "login") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -154,10 +158,16 @@ export default function Layout({ children, currentPageName }) {
         alert("Cadastro realizado! Se você não entrar automaticamente, verifique seu email.");
       }
     } catch (error) {
-      alert(error.message);
+      setAuthError(error.message);
     } finally {
       setAuthLoading(false);
     }
+  };
+
+  const toggleAuthMode = () => {
+    setAuthMode((mode) => (mode === "login" ? "signup" : "login"));
+    setAuthError("");
+    setShowPassword(false);
   };
 
   const handleLogout = async () => { await supabase.auth.signOut(); };
@@ -175,62 +185,171 @@ export default function Layout({ children, currentPageName }) {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4" style={{ backgroundColor: themeConfig.background }}>
+      <div
+        className="relative min-h-screen overflow-hidden px-4 py-10 md:py-16 text-white"
+        style={{
+          background:
+            "radial-gradient(circle at 15% 20%, rgba(168,85,247,0.28), transparent 35%), radial-gradient(circle at 85% 15%, rgba(59,130,246,0.22), transparent 30%), linear-gradient(140deg, #0c0a2a 0%, #1a0f3c 40%, #2c0f4f 75%, #3b0b60 100%)"
+        }}
+      >
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_60%_40%,rgba(255,255,255,0.08),transparent_35%)] blur-3xl" />
+        <div className="absolute inset-0 pointer-events-none">
+          {fireflies.map((firefly) => (
+            <motion.span
+              key={firefly.id}
+              className="absolute w-2 h-2 rounded-full bg-purple-400/70 blur-[1px]"
+              style={{ left: `${firefly.initialX}%`, top: `${firefly.initialY}%` }}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: [0, 1, 0], scale: [0.8, 1.15, 0.9], y: [0, -6, 0] }}
+              transition={{ duration: firefly.duration, repeat: Infinity, delay: firefly.delay, ease: "easeInOut" }}
+            />
+          ))}
+        </div>
+
         {isLoading ? (
-          <div className="text-center">
+          <div className="relative text-center">
             <Sparkles className="w-12 h-12 text-purple-500 animate-pulse mx-auto mb-4" />
             <p className="text-gray-300">Conectando ao universo...</p>
           </div>
         ) : (
-          <div className="max-w-md w-full bg-white/5 p-8 rounded-2xl border border-white/10 backdrop-blur-sm animate-in fade-in zoom-in duration-500">
-            <div className="text-center mb-8">
-              <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/690e5f6f991e09e82bef3795/a3f627646_imgi_2_337f3cf9e282bc41c87500e885414629.png" alt="Zamira" className="h-16 mx-auto mb-4 object-contain" />
-              <h2 className="text-2xl font-bold text-white">{authMode === 'login' ? 'Entrar no Portal' : 'Criar Conta'}</h2>
-              <p className="text-gray-400 text-sm mt-2">Sua jornada mística começa aqui.</p>
-            </div>
-
-            <form onSubmit={handleAuth} className="space-y-4">
-              <div className="space-y-2">
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                  <Input 
-                    type="email" 
-                    placeholder="Seu email" 
-                    className="pl-10 bg-black/20 border-white/10 text-white"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
+          <div className="relative max-w-5xl mx-auto grid items-center gap-10 md:grid-cols-[1.1fr_0.9fr]">
+            <motion.div
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6 }}
+              className="space-y-6"
+            >
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/5 text-sm text-purple-200">
+                <Sparkles className="w-4 h-4" />
+                Portal místico
+              </div>
+              <div className="space-y-3">
+                <h1 className="text-3xl md:text-4xl font-bold text-white leading-tight">
+                  Bem-vindo ao portal Zamira
+                </h1>
+                <p className="text-gray-300 text-lg">
+                  Conecte-se à comunidade, desbloqueie rituais e acompanhe sua evolução interior com segurança.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white/5 border border-white/10 rounded-xl p-4 shadow-lg shadow-purple-900/30">
+                  <div className="flex items-center gap-3">
+                    <Shield className="w-5 h-5 text-purple-300" />
+                    <div>
+                      <p className="font-semibold text-white text-sm">Acesso seguro</p>
+                      <p className="text-gray-400 text-xs">Autenticação protegida e moderada.</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                  <Input 
-                    type="password" 
-                    placeholder="Sua senha" 
-                    className="pl-10 bg-black/20 border-white/10 text-white"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                  />
+                <div className="bg-white/5 border border-white/10 rounded-xl p-4 shadow-lg shadow-purple-900/30">
+                  <div className="flex items-center gap-3">
+                    <Headphones className="w-5 h-5 text-purple-300" />
+                    <div>
+                      <p className="font-semibold text-white text-sm">Suporte amigo</p>
+                      <p className="text-gray-400 text-xs">Equipe pronta para ajudar sua jornada.</p>
+                    </div>
+                  </div>
                 </div>
               </div>
+            </motion.div>
 
-              <Button type="submit" className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold h-11" disabled={authLoading}>
-                {authLoading ? <Sparkles className="w-5 h-5 animate-spin" /> : (authMode === 'login' ? 'Entrar' : 'Cadastrar')}
-              </Button>
-            </form>
+            <motion.div
+              initial={{ opacity: 0, x: 12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6 }}
+              className="bg-white/10 border border-white/15 rounded-2xl p-8 shadow-2xl shadow-purple-900/40 backdrop-blur-lg"
+            >
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <p className="text-sm text-purple-200 font-semibold uppercase tracking-[0.08em]">
+                    {authMode === "login" ? "Entrada" : "Convite"}
+                  </p>
+                  <h2 className="text-2xl font-bold text-white mt-1">
+                    {authMode === "login" ? "Acesse sua conta" : "Crie sua conta"}
+                  </h2>
+                  <p className="text-gray-400 text-sm mt-2">Sua jornada mística começa aqui.</p>
+                </div>
+                <Badge variant="outline" className="border-purple-500/40 text-purple-100 bg-purple-500/10">
+                  Zamira
+                </Badge>
+              </div>
 
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-400">
-                {authMode === 'login' ? 'Ainda não tem conta? ' : 'Já é um iniciado? '}
-                <button onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')} className="text-purple-400 hover:text-purple-300 font-semibold underline hover:no-underline">
-                  {authMode === 'login' ? 'Criar agora' : 'Fazer login'}
-                </button>
-              </p>
-            </div>
+              {authError && (
+                <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                  {authError}
+                </div>
+              )}
+
+              <form onSubmit={handleAuth} className="space-y-4">
+                <div className="space-y-3">
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                    <Input
+                      type="email"
+                      placeholder="Seu email"
+                      className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-gray-500"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Sua senha"
+                      className="pl-10 pr-24 bg-white/5 border-white/10 text-white placeholder:text-gray-500"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={6}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="absolute right-3 top-2.5 text-xs text-purple-200 hover:text-white transition"
+                    >
+                      {showPassword ? "Ocultar" : "Mostrar"}
+                    </button>
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full h-11 bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-500 hover:to-blue-400 text-white font-semibold shadow-lg shadow-purple-900/40"
+                  disabled={authLoading}
+                >
+                  {authLoading ? <Sparkles className="w-5 h-5 animate-spin" /> : (
+                    <span className="flex items-center justify-center gap-2">
+                      <LogIn className="w-4 h-4" />
+                      {authMode === "login" ? "Entrar" : "Cadastrar"}
+                    </span>
+                  )}
+                </Button>
+              </form>
+
+              <div className="mt-6 text-center space-y-3">
+                <p className="text-sm text-gray-300">
+                  {authMode === "login" ? "Ainda não tem conta? " : "Já é um iniciado? "}
+                  <button
+                    onClick={toggleAuthMode}
+                    className="text-purple-300 hover:text-white font-semibold underline hover:no-underline"
+                  >
+                    {authMode === "login" ? "Criar agora" : "Fazer login"}
+                  </button>
+                </p>
+                <p className="text-xs text-gray-500">
+                  Ao continuar, você concorda com a guarda segura dos seus dados e o código de conduta da comunidade.
+                </p>
+              </div>
+            </motion.div>
           </div>
         )}
+        <div className="mt-12 text-center text-xs text-gray-300 flex items-center justify-center gap-2">
+          Desenvolvido com
+          <Heart className="w-4 h-4 text-pink-400 animate-pulse" />
+          por Vexto Digital
+        </div>
       </div>
     );
   }

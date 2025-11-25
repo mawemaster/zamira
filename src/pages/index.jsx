@@ -149,6 +149,7 @@ function PagesContent() {
                 <Route path="/" element={<Hub />} />
                 
                 <Route path="/Hub" element={<Hub />} />
+                <Route path="/hub" element={<Hub />} />
                 <Route path="/Arquetipo" element={<Arquetipo />} />
                 <Route path="/Chat" element={<Chat />} />
                 <Route path="/Portais" element={<Portais />} />
